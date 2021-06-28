@@ -1,15 +1,6 @@
-<!--
- * 严肃声明：
- * 开源版本请务必保留此注释头信息，若删除我方将保留所有法律责任追究！
- * 本系统已申请软件著作权，受国家版权局知识产权以及国家计算机软件著作权保护！
- * 可正常分享和学习源码，不得用于违法犯罪活动，违者必究！
- * Copyright (c) 2020 陈尼克 all rights reserved.
- * 版权所有，侵权必究！
- *
--->
 <template>
   <div class="address-box">
-    <s-header :name="'地址管理'" :back="from == 'create-order' ? '' : '/user'"></s-header>
+    <s-header :name="'地址管理'" :back="'/user'"></s-header>
     <div class="address-item">
       <van-address-list
         v-if="from != 'mine'"
@@ -33,57 +24,52 @@
 </template>
 
 <script>
-import { reactive, toRefs, onMounted } from 'vue'
+import { Toast } from 'vant';
 import sHeader from '@/components/SimpleHeader'
-import { getAddressList } from '@/service/address'
-import { useRoute, useRouter } from 'vue-router'
+import { getAddressList } from '../service/address'
+import { mapGetters } from "vuex";
+
 export default {
   components: {
     sHeader
   },
-  setup() {
-    const route = useRoute()
-    const router = useRouter()
-    const state = reactive({
+  data() {
+    return {
       chosenAddressId: '1',
       list: [],
-      from: route.query.from
-    })
-
-    onMounted(async () => {
-      const { data } = await getAddressList()
-      if (!data) {
-        state.list = []
-        return
-      }
-      state.list = data.map(item => {
-        return {
-          id: item.addressId,
-          name: item.userName,
-          tel: item.userPhone,
-          address: `${item.provinceName} ${item.cityName} ${item.regionName} ${item.detailAddress}`,
-          isDefault: !!item.defaultFlag
-        }
-      })
-    })
-
-    const onAdd = () => {
-      router.push({ path: '/address-edit', query: { type: 'add', from: state.from }})
+      from: this.$route.query.from,
     }
-
-    const onEdit = (item) => {
-      router.push({ path: 'address-edit', query: { type: 'edit', addressId: item.id, from: state.from }})
-    }
-
-    const select = (item) => {
-      router.push({ path: 'create-order', query: { addressId: item.id, from: state.from }})
-    }
-
+  },
+  computed: {
+    ...mapGetters({
+      avatar: "user/avatar",
+      email: "user/email",
+      username: "user/username",
+    }),
+  },
+  async mounted() {
+    await this.$store.dispatch("user/getInfo"); 
+    const { data } = await getAddressList({"email": this.email, "pageNo": 1, "pageSize": 100})
+    const result = data.items;
+    this.list = result.map(item => {
     return {
-      ...toRefs(state),
-      onAdd,
-      onEdit,
-      select
+      id: item.addressId,
+      name: item.username,
+      tel: item.phone,
+      address: `${item.detailAddress} ${item.townName} ${item.cityName} ${item.provinceName} ${item.postCode} `,
+      isDefault: !!item.defaultFlag
+    }
+    })
+  },
+  methods: {
+    onAdd() {
+      this.$router.push({ path: `address-edit?type=add&from=${this.from}` })
+    },
+    onEdit(item, index) {
+      this.$router.push({ path: `address-edit?type=edit&addressId=${item.id}&from=${this.from}` })
+    },
+    select(item, index) {
+      this.$router.push({ path: `create-order?addressId=${item.id}&from=${this.from}` })
     }
   }
 }
@@ -96,6 +82,7 @@ export default {
       display: none;
     }
     .address-item {
+      margin-top: 44px;
       .van-button {
         background: @primary;
         border-color: @primary;

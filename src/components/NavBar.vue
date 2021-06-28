@@ -1,61 +1,48 @@
-<!--
- * 严肃声明：
- * 开源版本请务必保留此注释头信息，若删除我方将保留所有法律责任追究！
- * 本系统已申请软件著作权，受国家版权局知识产权以及国家计算机软件著作权保护！
- * 可正常分享和学习源码，不得用于违法犯罪活动，违者必究！
- * Copyright (c) 2020 陈尼克 all rights reserved.
- * 版权所有，侵权必究！
- *
--->
-
 <template>
-  <div class="nav-bar van-hairline--top">
+  <div class="nav-bar">
     <ul class="nav-list">
       <router-link tag="li" class="nav-list-item active" to="home">
         <i class="nbicon nblvsefenkaicankaoxianban-1"></i>
-        <span>首页</span>
+        <span>Home</span>
       </router-link>
-      <router-link tag="li" class="nav-list-item" to="category">
+      <router-link tag="li" class="nav-list-item" to="boxes">
         <i class="nbicon nbfenlei"></i>
-        <span>分类</span>
+        <span>Boxes</span>
       </router-link>
       <router-link tag="li" class="nav-list-item" to="cart">
         <van-icon  name="shopping-cart-o" :badge="!count ? '' : count" />
-        <span>购物车</span>
+        <span>Award</span>
       </router-link>
       <router-link tag="li" class="nav-list-item" to="user">
         <i class="nbicon nblvsefenkaicankaoxianban-"></i>
-        <span>我的</span>
+        <span>Me</span>
       </router-link>
     </ul>
   </div>
 </template>
 
 <script>
-import { onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { useStore } from 'vuex'
-import { getLocal } from '@/common/js/utils'
-export default {
-  setup() {
-    const route = useRoute()
-    const store = useStore()
-    onMounted(() => {
-      const token = getLocal('token')
-      const path = route.path
-      if (token && !['/home', '/category'].includes(path)) {
-        store.dispatch('updateCart')
+import { okCode, errorCode } from "../config/settings";
+import { validLogin } from '../service/user'
+  export default {
+    async mounted() {
+      const { code, data } = await validLogin()
+      const path = this.$route.path
+      if (code == okCode && path != '/home') {
+        this.$store.dispatch('user/updateCart', {
+                  "email": data.email
+                })
       }
-    })
-    const count = computed(() => {
-      return store.state.cartCount
-    })
-
-    return {
-      count
+    },
+    data() {
+      return {}
+    },
+    computed: {
+      count () { 
+        return this.$store.state.user.count
+      }
     }
   }
-}
 </script>
 
 <style lang="less" scoped >

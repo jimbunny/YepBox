@@ -1,196 +1,176 @@
-<!--
- * 严肃声明：
- * 开源版本请务必保留此注释头信息，若删除我方将保留所有法律责任追究！
- * 本系统已申请软件著作权，受国家版权局知识产权以及国家计算机软件著作权保护！
- * 可正常分享和学习源码，不得用于违法犯罪活动，违者必究！
- * Copyright (c) 2020 陈尼克 all rights reserved.
- * 版权所有，侵权必究！
- *
--->
-
 <template>
   <div class="cart-box">
-    <s-header :name="'购物车'" :noback="true"></s-header>
+    <s-header :name="'Award'"></s-header>
     <div class="cart-body">
       <van-checkbox-group @change="groupChange" v-model="result" ref="checkboxGroup">
         <van-swipe-cell :right-width="50" v-for="(item, index) in list" :key="index">
           <div class="good-item">
-            <van-checkbox :name="item.cartItemId" />
-            <div class="good-img"><img :src="$filters.prefix(item.goodsCoverImg)" alt=""></div>
+            <van-checkbox :name="item.id" />
+            <div class="good-img"><img :src="prefix(item.picture)" alt=""></div>
             <div class="good-desc">
               <div class="good-title">
-                <span>{{ item.goodsName }}</span>
-                <span>x{{ item.goodsCount }}</span>
+                <span>{{ item.name }}</span>
+                <!-- <span>x{{ item.goodsCount }}</span> -->
+                <!-- <van-button plain @click="goToDetail(item)" size="mini" type="info">detail</van-button> -->
+                <van-tag plain @click="goToDetail(item)"  type="primary">detail</van-tag>
               </div>
               <div class="good-btn">
-                <div class="price">¥{{ item.sellingPrice }}</div>
-                <van-stepper
+                <div class="price">¥{{ item.outPrice }}</div>
+                <!-- <van-stepper
                   integer
                   :min="1"
-                  :max="5"
-                  :model-value="item.goodsCount"
+                  :value="item.goodsCount"
                   :name="item.cartItemId"
                   async-change
                   @change="onChange"
-                />
+                /> -->
+                <van-count-down :time="item.time" ref="countDown" @finish="finish">
+                  <template #default="timeData">
+                    <span class="block">{{ timeData.hours }}</span>
+                    <span class="colon">:</span>
+                    <span class="block">{{ timeData.minutes }}</span>
+                    <span class="colon">:</span>
+                    <span class="block">{{ timeData.seconds }}</span>
+                  </template>
+                </van-count-down>
               </div>
             </div>
           </div>
-          <template #right>
-            <van-button
-              square
-              icon="delete"
-              type="danger"
-              class="delete-button"
-              @click="deleteGood(item.cartItemId)"
-            />
-          </template>
+          <van-button
+            slot="right"
+            square
+            icon="delete"
+            type="danger"
+            class="delete-button"
+            @click="deleteGood(item.no)"
+          />
         </van-swipe-cell>
       </van-checkbox-group>
     </div>
     <van-submit-bar
       v-if="list.length > 0"
-      class="submit-all van-hairline--top"
+      class="submit-all"
       :price="total * 100"
       button-text="结算"
       @submit="onSubmit"
     >
-      <van-checkbox @click="allCheck" v-model:checked="checkAll">全选</van-checkbox>
+      <van-checkbox @click="allCheck" v-model="checkAll">全选</van-checkbox>
     </van-submit-bar>
     <div class="empty" v-if="!list.length">
-      <img class="empty-cart" src="https://s.yezgea02.com/1604028375097/empty-car.png" alt="空购物车">
-      <div class="title">购物车空空如也</div>
-      <van-button round color="#1baeae" type="primary" @click="goTo" block>前往选购</van-button>
+      <van-icon name="smile-o" />
+      <div class="title">购物车空空空如也</div>
+      <van-button color="rgb(23, 157, 254)" type="primary" @click="goTo" block>前往首页</van-button>
     </div>
     <nav-bar></nav-bar>
   </div>
 </template>
 
 <script>
-import { reactive, onMounted, computed, toRefs } from 'vue'
-import { useRouter } from 'vue-router'
-import { useStore } from 'vuex'
 import { Toast } from 'vant'
 import navBar from '@/components/NavBar'
 import sHeader from '@/components/SimpleHeader'
-import { getCart, deleteCartItem, modifyCart } from '@/service/cart'
+import { getCart, deleteCartItem, modifyCart } from '../service/cart'
+import { okCode } from '../config/settings'
 
 export default {
-  components: {
-    navBar,
-    sHeader
-  },
-  setup() {
-    const router = useRouter()
-    const store = useStore()
-    const state = reactive({
+  data() {
+    return {
       checked: false,
       list: [],
       all: false,
       result: [],
-      checkAll: true
-    })
-
-    onMounted(() => {
-      init()
-    })
-
-    const init = async () => {
-      Toast.loading({ message: '加载中...', forbidClick: true });
-      const { data } = await getCart({ pageNumber: 1 })
-      state.list = data
-      state.result = data.map(item => item.cartItemId)
-      Toast.clear()
+      checkAll: true,
+      email: ""
     }
-
-    const total = computed(() => {
+  },
+  components: {
+    navBar,
+    sHeader
+  },
+  async mounted() {
+    const user = await this.$store.dispatch("user/getInfo");
+    this.email = user.email
+    this.init()
+  },
+  computed: {
+    total: function() {
       let sum = 0
-      let _list = state.list.filter(item => state.result.includes(item.cartItemId))
+      let _list = this.list.filter(item => this.result.includes(item.id))
       _list.forEach(item => {
-        sum += item.goodsCount * item.sellingPrice
+        sum += item.outPrice
       })
       return sum
-    })
-
-    const goBack = () => {
-      router.go(-1)
-    }
-
-    const goTo = () => {
-      router.push({ path: '/home' })
-    }
-
-    const onChange = async (value, detail) => {
-      if (value > 5) {
-        Toast.fail('超出单个商品的最大购买数量')
-        return
+    },
+  },
+  methods: {
+    goToDetail(item) {
+      this.$router.push({ path: `product/${item.no}` })
+    },
+    async init() {
+      Toast.loading({ message: '加载中...', forbidClick: true });
+      const { code, data } = await getCart({ email: this.email })
+      if (code === okCode) {
+        this.list = data
+        this.result = data.map(item => item.id)
+      } else {
+        Toast.fail('获取购物车信息失败！')
       }
-      if (value < 1) {
-        Toast.fail('商品不得小于0')
-        return
-      }
-      if (state.list.filter(item => item.cartItemId == detail.name)[0].goodsCount == value) return
+      Toast.clear()
+    },
+    goBack() {
+      this.$router.go(-1)
+    },
+    goTo() {
+      this.$router.push({ path: 'home' })
+    },
+    finish() {
+      this.init();
+    },
+    async onChange(value, detail) {
+      if (this.list.filter(item => item.id == detail.name)[0].goodsCount == value) return
       Toast.loading({ message: '修改中...', forbidClick: true });
       const params = {
         cartItemId: detail.name,
         goodsCount: value
       }
-      await modifyCart(params)
-      state.list.forEach(item => {
+      const { data } = await modifyCart(params)
+      this.list.forEach(item => {
         if (item.cartItemId == detail.name) {
           item.goodsCount = value
         }
       })
       Toast.clear();
-    }
-
-    const onSubmit = async () => {
-      if (state.result.length == 0) {
+    },
+    async onSubmit() {
+      if (this.result.length == 0) {
         Toast.fail('请选择商品进行结算')
         return
       }
-      const params = JSON.stringify(state.result)
-      router.push({ path: '/create-order', query: { cartItemIds: params } })
-    }
-
-    const deleteGood = async (id) => {
-      await deleteCartItem(id)
-      store.dispatch('updateCart')
-      init()
-    }
-
-    const groupChange = (result) => {
-      console.log(1)
-      if (result.length == state.list.length) {
-        console.log(2)
-        state.checkAll = true
+      const params = JSON.stringify(this.result)
+      // for(let i = 0; i < this.result.length; i++) {
+      //   await deleteCartItem(this.result[i])
+      // }
+      this.$router.push({ path: `create-order?cartItemIds=${params}` })
+    },
+    async deleteGood(no) {
+      const { data } = await deleteCartItem({no: no})
+      this.$store.dispatch('user/updateCart',{"email": this.email})
+      this.init()
+    },
+    groupChange(result) {
+      if (result.length == this.list.length) {
+        this.checkAll = true
       } else {
-        console.log(3)
-        state.checkAll = false
+        this.checkAll = false
       }
-      state.result = result
-    }
-    
-    const allCheck = () => {
-      if (!state.checkAll) {
-        state.result = state.list.map(item => item.cartItemId)
+      this.result = result
+    },
+    allCheck(value) {
+      if (!this.checkAll) {
+        this.result = this.list.map(item => item.id)
       } else {
-        state.result = []
+        this.result = []
       }
-    }
-
-    
-
-    return {
-      ...toRefs(state),
-      total,
-      goBack,
-      goTo,
-      onChange,
-      onSubmit,
-      deleteGood,
-      groupChange,
-      allCheck
     }
   }
 }
@@ -198,6 +178,19 @@ export default {
 
 <style lang="less">
   @import '../common/style/mixin';
+  .colon {
+    display: inline-block;
+    margin: 0 4px;
+    color: #ee0a24;
+  }
+  .block {
+    display: inline-block;
+    width: 22px;
+    color: #fff;
+    font-size: 12px;
+    text-align: center;
+    background-color: #ee0a24;
+  }
   .cart-box {
     .cart-header {
       position: fixed;
@@ -217,7 +210,7 @@ export default {
       }
     }
     .cart-body {
-      margin: 16px 0 100px 0;
+      margin: 60px 0 100px 0;
       padding-left: 10px;
       .good-item {
         display: flex;
@@ -261,10 +254,6 @@ export default {
       margin: 0 auto;
       text-align: center;
       margin-top: 200px;
-      .empty-cart {
-        width: 150px;
-        margin-bottom: 20px;
-      }
       .van-icon-smile-o {
         font-size: 50px;
       }

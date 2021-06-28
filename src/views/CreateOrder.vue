@@ -1,155 +1,265 @@
-<!--
- * 严肃声明：
- * 开源版本请务必保留此注释头信息，若删除我方将保留所有法律责任追究！
- * 本系统已申请软件著作权，受国家版权局知识产权以及国家计算机软件著作权保护！
- * 可正常分享和学习源码，不得用于违法犯罪活动，违者必究！
- * Copyright (c) 2020 陈尼克 all rights reserved.
- * 版权所有，侵权必究！
- *
--->
-
 <template>
   <div class="create-order">
     <s-header :name="'生成订单'" @callback="deleteLocal"></s-header>
     <div class="address-wrap">
       <div class="name" @click="goTo">
-        <span>{{ address.userName }} </span>
-        <span>{{ address.userPhone }}</span>
+        <span>{{ address.username }} </span>
+        <span>{{ address.phone }}</span>
       </div>
       <div class="address">
-        {{ address.provinceName }} {{ address.cityName }} {{ address.regionName }} {{ address.detailAddress }}
+        {{ address.detailAddress }} {{ address.townName }} {{ address.cityName }} {{ address.provinceName }} {{ address.postCode }}
       </div>
       <van-icon class="arrow" name="arrow" />
     </div>
     <div class="good">
       <div class="good-item" v-for="(item, index) in cartList" :key="index">
-        <div class="good-img"><img :src="$filters.prefix(item.goodsCoverImg)" alt=""></div>
+        <div class="good-img"><img :src="prefix(item.picture)" alt=""></div>
         <div class="good-desc">
           <div class="good-title">
-            <span>{{ item.goodsName }}</span>
-            <span>x{{ item.goodsCount }}</span>
+            <span>{{ item.name }}</span>
+            <van-count-down :time="item.time" ref="countDown" @finish="finish">
+              <template #default="timeData">
+                <span class="block">{{ timeData.hours }}</span>
+                <span class="colon">:</span>
+                <span class="block">{{ timeData.minutes }}</span>
+                <span class="colon">:</span>
+                <span class="block">{{ timeData.seconds }}</span>
+              </template>
+            </van-count-down>
+            <!-- <span>x1</span> -->
           </div>
           <div class="good-btn">
-            <div class="price">¥{{ item.sellingPrice }}</div>
+            <div class="price">¥{{ item.outPrice }}</div>
           </div>
         </div>
       </div>
     </div>
     <div class="pay-wrap">
+      <!-- 优惠券单元格 -->
+      <van-coupon-cell
+        :coupons="coupons"
+        :chosen-coupon="chosenCoupon"
+        @click="showList = true"
+        style="padding-bottom:10px;"
+      />
       <div class="price">
-        <span>商品金额</span>
-        <span>¥{{ total }}</span>
+          <span style="color: #2c3e50;">商品金额</span>
+          <span> 
+          ¥{{ priceTip }}</span>
       </div>
-      <van-button @click="handleCreateOrder" class="pay-btn" color="#1baeae" type="primary" block>生成订单</van-button>
+      <van-button v-if="showTime" @click="createOrder" class="pay-btn" color="rgb(23, 157, 254)" type="primary" block>生成订单</van-button>
+      <van-button v-else @click="goToHome" class="pay-btn" color="rgb(23, 157, 254)" type="primary" block>返回首页</van-button>
     </div>
     <van-popup
       closeable
       :close-on-click-overlay="false"
-      v-model:show="showPay"
+      v-model="showPay"
       position="bottom"
       :style="{ height: '30%' }"
       @close="close"
     >
       <div :style="{ width: '90%', margin: '0 auto', padding: '50px 0' }">
-        <van-button :style="{ marginBottom: '10px' }" color="#1989fa" block @click="handlePayOrder(1)">支付宝支付</van-button>
-        <van-button color="#4fc08d" block @click="handlePayOrder(2)">微信支付</van-button>
+        <div style="bottom: 0; left: 0; width: 100%; background: #fff;">
+        <div style=" display: flex;justify-content: space-between;padding: 0 5%;margin: 10px 0;font-size: 14px;">
+          <span>账户金额</span>
+          <span style="color: red;font-size: 18px;"> 
+          ¥{{ balance }}</span>
+        </div>
+        <div style=" display: flex;justify-content: space-between;padding: 0 5%;margin: 10px 0;font-size: 14px;">
+          <span>订单金额</span>
+          <span style="color: red;font-size: 18px;"> 
+          ¥{{ priceTip }}</span>
+        </div>
+      </div>
+        <van-button v-if="balance>=total" :style="{ marginBottom: '10px' }" color="#1989fa" block @click="payOrder()">确认下单</van-button>
+        <van-button v-else color="#4fc08d" block @click="goToBalance()">余额不足，去充值</van-button>
       </div>
     </van-popup>
+    <!-- 优惠券列表 -->
+      <van-popup
+        v-model="showList"
+        round
+        position="bottom"
+        style="height: 90%; padding-top: 4px;"
+      >
+        <van-coupon-list
+          :coupons="coupons"
+          :chosen-coupon="chosenCoupon"
+          :disabled-coupons="disabledCoupons"
+          @change="onChange"
+          @exchange="onExchange"
+        />
+      </van-popup>
   </div>
 </template>
 
 <script>
-import { reactive, onMounted, toRefs, computed } from 'vue'
 import sHeader from '@/components/SimpleHeader'
-import { getByCartItemIds } from '@/service/cart'
-import { getDefaultAddress, getAddressDetail } from '@/service/address'
-import { createOrder, payOrder } from '@/service/order'
+import { getCart, getByCartItemIds } from '../service/cart'
+import { getDefaultAddress, getAddressDetail } from '../service/address'
+import { ExchangeCoupon, UseCoupon } from '../service/coupon'
+import { createOrder, payOrder } from '../service/order'
 import { setLocal, getLocal } from '@/common/js/utils'
 import { Toast } from 'vant'
-import { useRoute, useRouter } from 'vue-router'
+import { okCode } from '../config/settings'
+
+// const coupon = {
+//   available: 0,
+//   condition: '无使用门槛\n最多优惠12元',
+//   reason: '',
+//   value: 150,
+//   name: '优惠券名称',
+//   startAt: 1489104000,
+//   endAt: 1514592000,
+//   valueDesc: '1.5',
+//   unitDesc: '元',
+// };
+
 export default {
   components: {
     sHeader
   },
-  setup() {
-    const router = useRouter()
-    const route = useRoute()
-    const state = reactive({
+  data() {
+    return {
       cartList: [],
       address: {},
       showPay: false,
       orderNo: '',
-      cartItemIds: []
-    })
-
-    onMounted(() => {
-      init()
-    })
-    
-    const init = async () => {
+      cartItemIds: [],
+      email: "",
+      time: 0,
+      showTime: true,
+      balance: 0,
+      chosenCoupon: -1,
+      coupons: [],
+      disabledCoupons: [],
+      showList: false,
+      couponPrice: 0,
+      discountType: 0,
+      finalPrice: 0,
+      priceTip: ""
+    }
+  },
+  async mounted() {
+    const user = await this.$store.dispatch("user/getInfo");
+    this.email = user.email
+    this.balance = user.balance
+    this.init()
+    const {code, data} = await UseCoupon({email: this.email, totalPrice: this.total})
+    this.coupons = data.coupons
+    this.disabledCoupons = data.disabledCoupons
+  },
+  created() {
+  },
+  watch: {
+    "chosenCoupon": function (val) {
+      if (val >= 0) {
+        if (this.discountType == 1) {
+          this.finalPrice = this.total-this.couponPrice
+          this.priceTip = this.total.toString() + "-" + this.couponPrice.toString() + "=" + this.finalPrice.toString()
+        } else {
+          this.finalPrice = this.total*this.couponPrice/10
+          this.priceTip = this.total.toString() + "*" + (this.couponPrice/10).toString() + "=" + this.finalPrice.toString()
+        }
+      }else {
+        this.priceTip = this.total;
+      }
+    },
+  },
+  methods: {
+    async init() {
       Toast.loading({ message: '加载中...', forbidClick: true });
-      const { addressId, cartItemIds } = route.query
-      const _cartItemIds = cartItemIds ? JSON.parse(cartItemIds) : JSON.parse(getLocal('cartItemIds'))
-      console.log('cartItemIds', cartItemIds)
-      setLocal('cartItemIds', JSON.stringify(_cartItemIds))
+      const { addressId, cartItemIds } = this.$route.query
+      const _cartItemIds = cartItemIds ? JSON.parse(cartItemIds) : this.$store.state.user.cartItemIds
+      this.$store.dispatch("user/updateCartItemIds", _cartItemIds);
       const { data: list } = await getByCartItemIds({ cartItemIds: _cartItemIds.join(',') })
-      const { data: address } = addressId ? await getAddressDetail(addressId) : await getDefaultAddress()
+      const { data: address } = addressId ? await getAddressDetail({"addressId": addressId}) : await getDefaultAddress({"email": this.email})
       if (!address) {
-        router.push({ path: '/address' })
+        this.$router.push({ path: 'address' })
         return
       }
-      state.cartList = list
-      state.address = address
+      this.cartList = list
+      this.address = address
+      this.showTime = true
+      this.priceTip = this.total
       Toast.clear()
-    }
-
-    const goTo = () => {
-      router.push({ path: '/address', query: { cartItemIds: JSON.stringify(state.cartItemIds), from: 'create-order' }})
-    }
-
-    const deleteLocal = () => {
-      setLocal('cartItemIds', '')
-    }
-
-    const handleCreateOrder = async () => {
-      const params = {
-        addressId: state.address.addressId,
-        cartItemIds: state.cartList.map(item => item.cartItemId)
+    },
+    goTo() {
+      this.$router.push({ path: `address?cartItemIds=${JSON.stringify(this.cartItemIds)}` })
+    },
+    deleteLocal() {
+      this.$store.dispatch("user/updateCartItemIds", []);
+    },
+    async createOrder() {
+      this.showPay = true
+    },
+    onChange(index) {
+      this.showList = false;
+      this.chosenCoupon = index;
+      this.couponPrice = this.coupons[index].valueDesc 
+      this.discountType = this.coupons[index].discountType
+    },
+    async onExchange(key) {
+      // this.coupons.push(coupon);
+       const {code, data}  = await ExchangeCoupon({email:"954447255@qq.com", key: this.key})
+      if (code === okCode) {
+        Toast.success("兑换成功！")
+        setTimeout(function(){
+          this.init()
+        },1000)
+      } else {
+        Toast.fail("兑换码不正确，或者已经兑换过！")
       }
-      const { data } = await createOrder(params)
-      setLocal('cartItemIds', '')
-      state.orderNo = data
-      state.showPay = true
-    }
-
-    const close = () => {
-      router.push({ path: '/order' })
-    }
-
-    const handlePayOrder = async (type) => {
-      await payOrder({ orderNo: state.orderNo, payType: type })
-      Toast.success('支付成功')
-      setTimeout(() => {
-        router.push({ path: '/order' })
-      }, 2000)
-    }
-
-    const total = computed(() => {
+    },
+    close() {
+      // this.$router.push({ path: 'order' })
+    },
+    async payOrder(type) {
+      Toast.loading
+      // await payOrder({ orderNo: this.orderNo, payType: type })
+      const params = {
+        email: this.email,
+        addressId: this.address.addressId,
+        totalPrice: this.finalPrice,
+        phone: this.address.phone,
+        username: this.address.username,
+        payType: 'account',
+        productList: this.cartList.map(item => item.id)
+      }
+      const { code, data } = await createOrder(params)
+      if (code === okCode) {
+        this.$store.dispatch("user/updateCartItemIds", []);
+        this.orderNo = data
+        this.$router.push({ path: 'order' })
+      } else {
+        Toast.fail("订单创建失败！请联系客服！")
+      }
+    },
+    goToHome() {
+      this.$router.push({ path: `/home` })
+    },
+    goToBalance() {
+      this.$router.push({ path: `/balance` })
+    },
+    async finish() {
+      const { code, data } = await getCart({ email: this.email })
+      if (code === okCode) {
+        this.cartList = data
+        if (this.cartList.length===0) {
+          this.showTime = false
+        }
+      } else {
+        Toast.fail('获取购物车信息失败！')
+      }
+    },
+  },
+  computed: {
+    total: function() {
       let sum = 0
-      state.cartList.forEach(item => {
-        sum += item.goodsCount * item.sellingPrice
+      this.cartList.forEach(item => {
+        sum += item.outPrice
       })
       return sum
-    })
-
-    return {
-      ...toRefs(state),
-      goTo,
-      deleteLocal,
-      handleCreateOrder,
-      close,
-      handlePayOrder,
-      total
     }
   }
 }
@@ -163,6 +273,7 @@ export default {
       margin-bottom: 20px;
       background: #fff;
       position: relative;
+      margin-top: 44px;
       font-size: 14px;
       padding: 15px;
       color: #222333;
@@ -189,7 +300,7 @@ export default {
       }
     }
     .good {
-      margin-bottom: 120px;
+      margin-bottom: 180px;
     }
     .good-item {
       padding: 10px;

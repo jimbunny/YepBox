@@ -1,31 +1,153 @@
-/**
- * 严肃声明：
- * 开源版本请务必保留此注释头信息，若删除我方将保留所有法律责任追究！
- * 本系统已申请软件著作权，受国家版权局知识产权以及国家计算机软件著作权保护！
- * 可正常分享和学习源码，不得用于违法犯罪活动，违者必究！
- * Copyright (c) 2020 陈尼克 all rights reserved.
- * 版权所有，侵权必究！
- */
+import request from '../utils/axios'
 
-import axios from '../utils/axios'
+// export function getHome(params) {
+//   return axios.get('/index-infos');
+// }
 
-export function getUserInfo() {
-  return axios.get('/user/info');
+export function login(data) {
+  return request({
+      url: "/mall/login",
+      method: "post",
+      data,
+  });
 }
 
-export function EditUserInfo(params) {
-  return axios.put('/user/info', params);
+export function register(data) {
+  return request({
+      url: "/mall/register",
+      method: "post",
+      data,
+  });
 }
 
-export function login(params) {
-  return axios.post('/user/login', params);
+export function checkUsername(data) {
+  return request({
+      url: "/mall/checkUsername",
+      method: "get",
+      params: data,
+  });
+}
+
+export function checkEmail(data) {
+  return request({
+      url: "/mall/checkEmail",
+      method: "get",
+      params: data,
+  });
+}
+
+export function checkPhone(data) {
+  return request({
+      url: "/mall/checkPhone",
+      method: "get",
+      params: data,
+  });
+}
+export function getUserInfo(data) {
+  return request({
+      url: "/mall/userInfo",
+      method: "post",
+      data,
+  });
+}
+
+export function EditUserInfo(data) {
+  return request({
+      url: "/mall/userInfo",
+      method: "put",
+      data,
+  });
+}
+
+export function AddBalanceInfo(data) {
+  return request({
+      url: "/mall/balanceInfo",
+      method: "post",
+      headers: { "Content-Type": "multipart/form-data" },
+      data,
+      type: "form"
+  });
+}
+
+export function GetBalanceInfo(data) {
+  return request({
+      url: "/mall/balanceInfo",
+      method: "get",
+      params: data,
+  });
+}
+
+export function AddPointInfo(data) {
+  return request({
+      url: "/mall/pointInfo",
+      method: "post",
+      data,
+  });
+}
+
+export function GetPointInfo(data) {
+  return request({
+      url: "/mall/pointInfo",
+      method: "get",
+      params: data,
+  });
+}
+
+export function validFB(data) {
+  return request({
+      url: "/mall/validFB",
+      method: "post",
+      data,
+  });
+}
+
+export function validLogin() {
+  return request({
+      url: "/mall/validLogin",
+      method: "get",
+  });
+}
+
+export function forgetPassword(data) {
+  return request({
+      url: "/mall/forgetPassword",
+      method: "post",
+      data,
+  });
+}
+
+export function inviteList(data) {
+  return request({
+      url: "/mall/inviteList",
+      method: "post",
+      data,
+  });
 }
 
 export function logout() {
-  return axios.post('/user/logout')
+  return request({
+      url: "/mall/logout",
+      method: "post",
+  });
 }
 
-export function register(params) {
-  return axios.post('/user/register', params);
-}
+// export function getUserInfo() {
+//   return axios.get('/user/info');
+// }
+
+// export function EditUserInfo(params) {
+//   return axios.put('/user/info', params);
+// }
+
+// export function login(params) {
+//   return axios.post('/user/login', params);
+// }
+
+// export function logout() {
+//   return axios.post('/user/logout')
+// }
+
+// export function register(params) {
+//   return axios.post('/user/register', params);
+// }
 

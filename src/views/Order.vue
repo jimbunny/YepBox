@@ -1,128 +1,129 @@
-<!--
- * 严肃声明：
- * 开源版本请务必保留此注释头信息，若删除我方将保留所有法律责任追究！
- * 本系统已申请软件著作权，受国家版权局知识产权以及国家计算机软件著作权保护！
- * 可正常分享和学习源码，不得用于违法犯罪活动，违者必究！
- * Copyright (c) 2020 陈尼克 all rights reserved.
- * 版权所有，侵权必究！
- *
--->
-
 <template>
   <div class="order-box">
     <s-header :name="'我的订单'" :back="'/user'"></s-header>
-    <van-tabs @click="onChangeTab" :color="'#1baeae'" :title-active-color="'#1baeae'" class="order-tab" v-model="status">
-      <van-tab title="全部" name=''></van-tab>
-      <van-tab title="待付款" name="0"></van-tab>
-      <van-tab title="待确认" name="1"></van-tab>
-      <van-tab title="待发货" name="2"></van-tab>
-      <van-tab title="已发货" name="3"></van-tab>
-      <van-tab title="交易完成" name="4"></van-tab>
+    <van-tabs @change="onChangeTab" :color="'rgb(23, 157, 254)'" :title-active-color="'rgb(23, 157, 254)'" class="order-tab" v-model="status">
+      <van-tab title="全部" name='all'></van-tab>
+      <van-tab title="待发货" name="noDelivery"></van-tab>
+      <van-tab title="已发货" name="delivered"></van-tab>
     </van-tabs>
-    <div class="content">
-      <van-pull-refresh v-model="refreshing" @refresh="onRefresh" class="order-list-refresh">
-        <van-list
-          v-model:loading="loading"
-          :finished="finished"
-          finished-text="没有更多了"
-          @load="onLoad"
-          @offset="10"
-        >
-          <div v-for="(item, index) in list" :key="index" class="order-item-box" @click="goTo(item.orderNo)">
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh" class="order-list-refresh">
+      <van-list
+        v-model="loading"
+        :finished="finished"
+        finished-text="没有更多了"
+        @load="onLoad"
+        @offset="300"
+      >
+        <div v-for="(item, index) in list" :key="index" class="order-item-box">
             <div class="order-item-header">
               <span>订单时间：{{ item.createTime }}</span>
-              <span>{{ item.orderStatusString }}</span>
+              <span>{{ item.status }}</span>
             </div>
             <van-card
-              v-for="one in item.newBeeMallOrderItemVOS"
-              :key="one.orderId"
-              :num="one.goodsCount"
-              :price="one.sellingPrice"
-              desc="全场包邮"
-              :title="one.goodsName"
-              :thumb="$filters.prefix(one.goodsCoverImg)"
+              @click="goTo(item.no)"
+               v-for="(one, index) in item.OrderItemVOS.slice(0,1)" :key="index"
+              :num="1"
+              :price="one.outPrice"
+              :desc="one.description"
+              :title="one.name"
+              :thumb="prefix(one.picture)"
             />
-          </div>
-        </van-list>
-      </van-pull-refresh>
-    </div>
+            <van-collapse v-model="activeNames" >
+              <van-collapse-item title="detail" :name="item.no">
+                <van-card
+                  v-for="(one, index) in item.OrderItemVOS.slice(1-item.OrderItemVOS.length)" :key="index" 
+                  :num="1"
+                  :price="one.outPrice"
+                  :desc="one.description"
+                  :title="one.name"
+                  :thumb="prefix(one.picture)"
+                />
+              </van-collapse-item>
+            </van-collapse>
+             <div style="bottom: 0; left: 0; width: 100%; background: #fff;">
+              <div style=" display: flex;justify-content: space-between;padding: 0 5%;margin: 10px 0;font-size: 14px;">
+                <span>数量 {{ item.OrderItemVOS.length }}</span>
+                <span style="color: red;font-size: 18px;"> 
+                ¥{{ item.totalPrice }}</span>
+              </div>
+              </div>
+        </div>
+      </van-list>
+    </van-pull-refresh>
   </div>
 </template>
 
 <script>
-import { reactive, toRefs } from 'vue';
 import sHeader from '@/components/SimpleHeader'
-import { getOrderList } from '@/service/order'
-import { useRouter } from 'vue-router';
+import { getOrderList } from '../service/order'
+import { prefix } from '@/common/js/utils'
+import { mapGetters } from "vuex";
 
 export default {
-  name: 'Order',
-  components: {
-    sHeader
-  },
-  setup() {
-    const router = useRouter()
-    const state = reactive({
+  data() {
+    return {
       status: '',
       loading: false,
       finished: false,
       refreshing: false,
       list: [],
       page: 1,
-      totalPage: 0
-    })
-
-    const loadData = async () => {
-      const { data, data: { list } } = await getOrderList({ pageNumber: state.page, status: state.status })
-      state.list = state.list.concat(list)
-      state.totalPage = data.totalPage
-      state.loading = false;
-      if (state.page >= data.totalPage) state.finished = true
+      email: "",
+      activeNames: [],
     }
-
-    const onChangeTab = (name) => {
-      // 这里 Tab 最好采用点击事件，@click，如果用 @change 事件，会默认进来执行一次。
-      state.status = name
-      onRefresh()
-    }
-
-    const goTo = (id) => {
-      router.push({ path: '/order-detail', query: { id } })
-    }
-
-    const goBack = () => {
-      router.go(-1)
-    }
-
-    const onLoad = () => {
-      if (!state.refreshing && state.page < state.totalPage) {
-        console.log(state.page)
-        console.log(state.totalPage)
-        state.page = state.page + 1
+  },
+  components: {
+    sHeader
+  },
+  computed: {
+    ...mapGetters({
+      avatar: "user/avatar",
+      email: "user/email",
+      username: "user/username",
+    }),
+  },
+  async created() {
+    const user = await this.$store.dispatch("user/getInfo");
+    this.email = user.email
+  },
+  async mounted() {
+    // this.loadData()
+  },
+  methods: {
+    async loadData() {
+      const { data, data: { items } } = await getOrderList({ pageNo: this.page, pageSize: 5, email: '954447255@qq.com', status: this.status })
+      this.list = this.list.concat(items)
+      this.totalPage = data.totalPage
+      this.loading = false;
+      if (this.page >= data.totalPage) this.finished = true
+    },
+    onChangeTab(name, title) {
+      this.status = name
+      this.onRefresh()
+    },
+    goTo(id) {
+      this.$router.push({ path: `order-detail?id=${id}` })
+    },
+    goBack() {
+      this.$router.go(-1)
+    },
+    onLoad() {
+      if (!this.refreshing && this.page < this.totalPage) {
+        this.page = this.page + 1
       }
-      if (state.refreshing) {
-        state.list = [];
-        state.refreshing = false;
+      if (this.refreshing) {
+        this.list = [];
+        this.refreshing = false;
       }
-      loadData()
-    }
-
-    const onRefresh = () => {
-      state.refreshing = true
-      state.finished = false
-      state.loading = true
-      state.page = 1
-      onLoad()
-    }
-
-    return {
-      ...toRefs(state),
-      onChangeTab,
-      goTo,
-      goBack,
-      onLoad,
-      onRefresh
-    }
+      this.loadData()
+    },
+    onRefresh() {
+      this.refreshing = true
+      this.finished = false
+      this.loading = true
+      this.page = 1
+      this.onLoad()
+    },
   }
 }
 </script>
@@ -148,22 +149,14 @@ export default {
       }
     }
     .order-tab {
+      margin-top: 44px;
       position: fixed;
       left: 0;
       z-index: 1000;
       width: 100%;
-      border-bottom: 1px solid #e9e9e9;
-    }
-    .skeleton {
-      margin-top: 60px;
-    }
-    .content {
-      height: calc(~"(100vh - 70px)");
-      overflow: hidden;
-      overflow-y: scroll; 
-      margin-top: 34px;
     }
     .order-list-refresh {
+      margin-top: 68px;
       .van-card__content {
         display: flex;
         flex-direction: column;
@@ -171,6 +164,11 @@ export default {
       }
       .van-pull-refresh__head {
         background: #f9f9f9;
+      }
+      .van-list {
+        min-height: calc(100vh - 88px);
+        background: #f9f9f9;
+        margin-top: 20px;
       }
       .order-item-box {
         margin: 20px 10px;

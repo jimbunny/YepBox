@@ -1,13 +1,3 @@
-<!--
- * 严肃声明：
- * 开源版本请务必保留此注释头信息，若删除我方将保留所有法律责任追究！
- * 本系统已申请软件著作权，受国家版权局知识产权以及国家计算机软件著作权保护！
- * 可正常分享和学习源码，不得用于违法犯罪活动，违者必究！
- * Copyright (c) 2020 陈尼克 all rights reserved.
- * 版权所有，侵权必究！
- *
--->
-
 <template>
   <div class="product-list-wrap">
     <div class="product-list-content">
@@ -18,53 +8,48 @@
           <input
             type="text"
             class="search-title"
+            @mouseenter="textEnter"
+            @mouseleave="textLeave"
             v-model="keyword"/>
         </div>
         <span class="search-btn" @click="getSearch">搜索</span>
       </header>
-      <van-tabs type="card" color="#1baeae" @click="changeTab" >
+      <van-tabs type="card" color="rgb(23, 157, 254)" @click="changeTab" >
         <van-tab title="推荐" name=""></van-tab>
         <van-tab title="新品" name="new"></van-tab>
         <van-tab title="价格" name="price"></van-tab>
       </van-tabs>
     </div>
-    <div class="content">
-      <van-pull-refresh v-model="refreshing" @refresh="onRefresh" class="product-list-refresh">
-        <van-list
-          v-model:loading="loading"
-          :finished="finished"
-          :finished-text="productList.length ? '没有更多了' : '搜索想要的商品'"
-          @load="onLoad"
-          @offset="10"
-        >
-          <!-- <p v-for="item in list" :key="item">{{ item }}</p> -->
-          <template v-if="productList.length">
-            <div class="product-item" v-for="(item, index) in productList" :key="index" @click="productDetail(item)">
-              <img :src="$filters.prefix(item.goodsCoverImg)" />
-              <div class="product-info">
-                <p class="name">{{item.goodsName}}</p>
-                <p class="subtitle">{{item.goodsIntro}}</p>
-                <span class="price">￥ {{item.sellingPrice}}</span>
-              </div>
-            </div>
-          </template>
-          <img class="empty" v-else src="https://s.yezgea02.com/1604041313083/kesrtd.png" alt="搜索">
-        </van-list>
-      </van-pull-refresh>
-    </div>
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh" class="product-list-refresh">
+      <van-list
+        v-model="loading"
+        :finished="finished"
+        finished-text="没有更多了"
+        @load="onLoad"
+        @offset="300"
+      >
+        <!-- <p v-for="item in list" :key="item">{{ item }}</p> -->
+        <div class="product-item" v-for="(item, index) in productList" :key="index" @click="productDetail(item)">
+          <img :src="prefix(item.goodsCoverImg)" />
+          <div class="product-info">
+            <p class="name">{{item.goodsName}}</p>
+            <p class="subtitle">{{item.goodsIntro}}</p>
+            <span class="price">￥ {{item.sellingPrice}}</span>
+          </div>
+        </div>
+      </van-list>
+    </van-pull-refresh>
   </div>
 </template>
 
 <script>
-import { reactive, toRefs } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { search } from '@/service/good'
+import { getQueryString } from '@/common/js/utils'
+import { search } from '../service/package'
+import { Toast } from 'vant'
 export default {
-  setup() {
-    const route = useRoute()
-    const router = useRouter()
-    const state = reactive({
-      keyword: route.query.keyword || '',
+  data() {
+    return {
+      keyword: this.$route.query.keyword || '',
       searchBtn: false,
       seclectActive: false,
       refreshing: false,
@@ -75,73 +60,69 @@ export default {
       totalPage: 0,
       page: 1,
       orderBy: ''
-    })
-
-    // onMounted(() => {
-    //   init()
-    // })
-
-    const init = async () => {
-      const { categoryId } = route.query
-      if (!categoryId && !state.keyword) {
+    }
+  },
+  mounted() {
+    // window.addEventListener('scroll', this.pageScroll)
+    // setTimeout(() => {
+    //     this.isLoading = false
+    // }, 500)
+    // this.init()
+  },
+  methods: {
+    async init() {
+      const { categoryId, from } = this.$route.query
+      if (!categoryId && !this.keyword) {
         // Toast.fail('请输入关键词')
-        state.finished = true
-        state.loading = false;
+        this.finished = true
+        this.loading = false;
         return
       }
-      const { data, data: { list } } = await search({ pageNumber: state.page, goodsCategoryId: categoryId, keyword: state.keyword, orderBy: state.orderBy })
-      
-      state.productList = state.productList.concat(list)
-      state.totalPage = data.totalPage
-      state.loading = false;
-      if (state.page >= data.totalPage) state.finished = true
-    }
+      const { data, data: { list } } = await search({ pageNumber: this.page, goodsCategoryId: categoryId, keyword: this.keyword, orderBy: this.orderBy })
+      this.productList = this.productList.concat(list)
+      this.totalPage = data.totalPage
+      this.loading = false;
+      if (this.page >= data.totalPage) this.finished = true
+    },
+    goBack() {
+      this.$router.go(-1)
+    },
+    productDetail(item) {
+      this.$router.push({ path: `product/${item.goodsId}` })
+    },
+    textEnter() {
 
-    const goBack = () => {
-      router.go(-1)
-    }
+    },
+    textLeave() {
 
-    const productDetail = (item) => {
-      router.push({ path: `/product/${item.goodsId}` })
-    }
-
-    const getSearch = () => {
-      onRefresh()
-    }
-
-    const onLoad = () => {
-      if (!state.refreshing && state.page < state.totalPage) {
-        state.page = state.page + 1
+    },
+    getSearch() {
+      this.onRefresh()
+    },
+    pageScroll() {
+      let scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop
+      scrollTop > 50 ? this.seclectActive = true : this.seclectActive = false
+    },
+    onLoad() {
+      if (!this.refreshing && this.page < this.totalPage) {
+        this.page = this.page + 1
       }
-      if (state.refreshing) {
-        state.productList = [];
-        state.refreshing = false;
+      if (this.refreshing) {
+        this.productList = [];
+        this.refreshing = false;
       }
-      init()
-    }
-
-    const onRefresh = () => {
-      state.refreshing = true
-      state.finished = false
-      state.loading = true
-      state.page = 1
-      onLoad()
-    }
-
-    const changeTab = (name) => {
-      console.log('name', name)
-      state.orderBy = name
-      onRefresh()
-    }
-
-    return {
-      ...toRefs(state),
-      goBack,
-      productDetail,
-      getSearch,
-      changeTab,
-      onLoad,
-      onRefresh
+      this.init()
+    },
+    onRefresh() {
+      this.refreshing = true
+      this.finished = false
+      this.loading = true
+      this.page = 1
+      this.onLoad()
+    },
+    changeTab(name, title) {
+      this.orderBy = name
+      this.onRefresh()
     }
   }
 }
@@ -208,13 +189,8 @@ export default {
     }
   }
 }
-  .content {
-    height: calc(~"(100vh - 70px)");
-    overflow: hidden;
-    overflow-y: scroll; 
-    margin-top: 78px;
-  }
   .product-list-refresh {
+    margin-top: 78px;
     .product-item {
       .fj();
       width: 100%;
@@ -260,11 +236,6 @@ export default {
             font-size: 16px;
           }
       }
-  }
-  .empty {
-    display: block;
-    width: 150px;
-    margin: 50px auto 20px;
   }
 }
 </style>

@@ -1,17 +1,7 @@
-<!--
- * 严肃声明：
- * 开源版本请务必保留此注释头信息，若删除我方将保留所有法律责任追究！
- * 本系统已申请软件著作权，受国家版权局知识产权以及国家计算机软件著作权保护！
- * 可正常分享和学习源码，不得用于违法犯罪活动，违者必究！
- * Copyright (c) 2020 陈尼克 all rights reserved.
- * 版权所有，侵权必究！
- *
--->
-
 <template>
   <div class="categray">
     <div>
-      <header class="category-header wrap van-hairline--bottom">
+      <header class="category-header wrap">
         <i class="nbicon nbfanhui" @click="goHome"></i>
         <div class="header-search">
           <i class="nbicon nbSearch"></i>
@@ -58,55 +48,40 @@
 </template>
 
 <script>
-import { reactive, onMounted, ref, toRefs } from 'vue'
-import { useRouter } from 'vue-router'
 import navBar from '@/components/NavBar'
 import listScroll from '@/components/ListScroll'
-import { getCategory } from "@/service/good";
-import { Toast } from 'vant'
+import { getCategory } from "../service/package";
 export default {
   components: {
     navBar,
     listScroll
   },
-  setup() {
-    const router = useRouter()
-    // composition API 获取 refs 的形式
-    const searchWrap = ref(null)
-    const state = reactive({
+  data() {
+    return {
       categoryData: [],
       currentIndex: 15
-    })
-
-    onMounted(async () => {
+    }
+  },
+  async mounted() {
+    this.setWrapHeight()
+    const { data } = await getCategory()
+    this.categoryData = data
+  },
+  methods: {
+    goHome () {
+      this.$router.push({ path: 'home' })
+    },
+    setWrapHeight() {
+      // 设置视口高度
       let $screenHeight = document.documentElement.clientHeight
-      console.log('searchWrap.value', searchWrap.value)
-      searchWrap.value.style.height = $screenHeight - 100 + 'px'
-      Toast.loading('加载中...')
-      const { data } = await getCategory()
-      Toast.clear()
-      state.categoryData = data
-    })
-
-    const goHome = () => {
-      router.push({ path: 'home' })
-    }
-
-    const selectMenu = (index) => {
-      state.currentIndex = index
-    }
-
-    const selectProduct = (item) => {
-      console.log('item', item.categoryId)
-      router.push({ path: '/product-list', query: { categoryId: item.categoryId } })
-    }
-    return {
-      ...toRefs(state),
-      goHome,
-      selectMenu,
-      selectProduct,
-      searchWrap
-    }
+      this.$refs.searchWrap.style.height = $screenHeight - 100 + 'px'
+    },
+    selectMenu(index) {
+      this.currentIndex = index
+    },
+    selectProduct(item){
+      this.$router.push({ path: `product-list?categoryId=${item.categoryId}` })
+    },
   }
 }
 </script>
@@ -150,7 +125,6 @@ export default {
         .search-title {
           font-size: 12px;
           color: #666;
-          line-height: 21px;
         }
       }
       .icon-More {
@@ -163,6 +137,7 @@ export default {
     width: 100%;
     margin-top: 50px;
     background: #F8F8F8;
+    border-top: 1px solid #999;
     .nav-side-wrapper {
       width: 28%;
       height: 100%;
@@ -189,11 +164,6 @@ export default {
       height: 100%;
       padding: 0 10px;
       background: #fff;
-      overflow-y: scroll;
-      touch-action: pan-y;
-      * {
-          touch-action: pan-y;
-        }
       .boxSizing();
       .swiper-container {
         width: 100%;

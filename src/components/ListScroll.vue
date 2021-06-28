@@ -1,13 +1,3 @@
-<!--
- * 严肃声明：
- * 开源版本请务必保留此注释头信息，若删除我方将保留所有法律责任追究！
- * 本系统已申请软件著作权，受国家版权局知识产权以及国家计算机软件著作权保护！
- * 可正常分享和学习源码，不得用于违法犯罪活动，违者必究！
- * Copyright (c) 2020 陈尼克 all rights reserved.
- * 版权所有，侵权必究！
- *
--->
-
 <template>
   <div ref="wrapper" class="scroll-wrapper">
     <slot></slot>
@@ -70,27 +60,81 @@ export default {
   },
   mounted() {
     // 在 DOM 渲染完毕后初始化 better-scroll
-    this.$nextTick(() => {
+    setTimeout(() => {
       this.initScroll()
-    })
-  },
-  updated() {
-    this.bs.refresh()
+    }, 20)
   },
   methods: {
     initScroll() {
+      if (!this.$refs.wrapper) {
+        return
+      }
       // better-scroll 初始化
-      this.bs = new BScroll(this.$refs.wrapper, {
-        probeType: 3,
-        click: true
+      this.scroll = new BScroll(this.$refs.wrapper, {
+        probeType: this.probeType,
+        click: this.click,
+        scrollX: this.scrollX
       })
-      this.bs.on('scroll', () => {
-          console.log('scrolling-')
+      // 是否派发滚动事件
+      if (this.listenScroll) {
+        const self = this
+        this.scroll.on('scroll', (position) => {
+          self.$emit('scroll', position)
         })
-        this.bs.on('scrollEnd', () => {
-          console.log('scrollingEnd')
+      }
+      if (this.pullup) {
+        this.scroll.on('scrollEnd', () => {
+          // 滚动到底部
+          if (this.scroll.y <= (this.scroll.maxScrollY + 50)) {
+            // 派发滚动到底部的事件
+            this.$emit('scrollToEnd')
+          }
         })
-    } 
+      }
+      if (this.pulldown) {
+        this.scroll.on('touchend', (pos) => {
+          // 下拉动作
+          if (pos.y > 50) {
+            // 下拉刷新
+            this.$emit('pulldown')
+          }
+        })
+      }
+      if (this.beforeScroll) {
+        this.scroll.on('beforeScrollStart', () => {
+          // 列表滚动前触发
+          this.$emit('beforeScroll')
+        })
+      }
+    },
+    disable() {
+      // 代理 better-scroll 的 disable 方法
+      this.scroll && this.scroll.disable()
+    },
+    enable() {
+        // 代理 better-scroll 的 enable 方法
+        this.scroll && this.scroll.enable()
+    },
+    refresh() {
+        // 代理 better-scroll 的 refresh 方法
+        this.scroll && this.scroll.refresh()
+    },
+    scrollTo() {
+        // 代理 better-scroll 的 scrollTo 方法
+        this.scroll && this.scroll.scrollTo.apply(this.scroll, arguments)
+    },
+    scrollToElement() {
+        // 代理 better-scroll 的 scrollToElement 方法
+        this.scroll && this.scroll.scrollToElement.apply(this.scroll, arguments)
+    }
+  },
+  watch: {
+    // 监听数据的变化，重新计算高度
+    data() {
+      setTimeout(() => {
+          this.refresh()
+      }, this.refreshDelay)
+    }
   }
 }
 </script>
@@ -100,7 +144,5 @@ export default {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    overflow-y: scroll;
-    touch-action: pan-y;
   }
 </style>

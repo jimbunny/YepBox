@@ -1,14 +1,14 @@
 ![](static-files/newbee-mall.png)
 
 ![Build Status](https://img.shields.io/badge/build-passing-green.svg)
-![Version 3.0.0](https://img.shields.io/badge/version-3.0.0-yellow.svg)
-[![License](https://img.shields.io/badge/license-GPL3.0-blue.svg)](https://github.com/newbee-ltd/newbee-mall-vue3-app/blob/master/LICENSE)
+![Version 2.0.0](https://img.shields.io/badge/version-2.0.0-yellow.svg)
+[![License](https://img.shields.io/badge/license-GPL3.0-blue.svg)](https://github.com/newbee-ltd/newbee-mall-vue-app/blob/master/LICENSE)
 
 newbee-mall 项目是一套电商系统，包括 newbee-mall 商城系统及 newbee-mall-admin 商城后台管理系统，基于 Spring Boot 2.X 和 Vue 以及相关技术栈开发。 前台商城系统包含首页门户、商品分类、新品上线、首页轮播、商品推荐、商品搜索、商品展示、购物车、订单结算、订单流程、个人订单管理、会员中心、帮助中心等模块。 后台管理系统包含数据面板、轮播图管理、商品管理、订单管理、会员管理、分类管理、设置等模块。
 
-本仓库中的源码为新蜂商城前后端分离版本的 Vue 项目（Vue 版本为 3.x），主要面向前端开发人员，后端 API 源码在另外一个仓库 [newbee-mall-api](https://github.com/newbee-ltd/newbee-mall-api)。
+本仓库中的源码为新蜂商城前后端分离版本的 Vue 项目（Vue 版本为 2.x），主要面向前端开发人员，后端 API 源码在另外一个仓库 [newbee-mall-api](https://github.com/newbee-ltd/newbee-mall-api)。
 
-新蜂商城 Vue3 版本线上预览地址：[http://vue3-app.newbee.ltd](http://47.99.134.126:5008)，账号可自行注册，建议使用手机模式打开。
+新蜂商城 Vue 版本线上预览地址：[http://vue-app.newbee.ltd](http://47.99.134.126:5000)，账号可自行注册，建议使用手机模式打开。
 
 前后端分离版本包括四个仓库：
 
@@ -74,10 +74,10 @@ newbee-mall 项目是一套电商系统，包括 newbee-mall 商城系统及 new
 
 ## 联系作者
 
-> 大家有任何问题或者建议都可以在 [issues](https://github.com/newbee-ltd/newbee-mall-vue3-app/issues) 中反馈给我，我会慢慢完善这个项目。
+> 大家有任何问题或者建议都可以在 [issues](https://github.com/newbee-ltd/newbee-mall-vue-app/issues) 中反馈给我，我会慢慢完善这个项目。
 
 - 我的邮箱：2449207463@qq.com
-- QQ技术交流群：932227898
+- QQ技术交流群：932227898 719099151 796794009
 
 ## 软件著作权
 
@@ -87,7 +87,7 @@ newbee-mall 项目是一套电商系统，包括 newbee-mall 商城系统及 new
 
 ## 页面展示
 
-以下为新蜂商城 Vue3 版本的页面预览：
+以下为新蜂商城 Vue 版本的页面预览：
 
 - 登录页
 
@@ -128,7 +128,8 @@ newbee-mall 项目是一套电商系统，包括 newbee-mall 商城系统及 new
 ## 感谢
 
 - [Vue](https://github.com/vuejs/vue)
-- [Vue-Router](https://github.com/vuejs/vue-router-next)
-- [Vuex](https://github.com/vuejs/vuex/tree/4.0)
 - [Vant](https://github.com/youzan/vant)
+- [vue2-verify](https://github.com/mizuka-wu/vue2-verify)
 - [better-scroll](https://github.com/ustbhuangyi/better-scroll)
+- [Vuex](https://github.com/vuejs/vuex)
+

@@ -1,11 +1,18 @@
-import { createStore } from 'vuex'
-import state from './state'
-import actions from './actions'
-import mutations from './mutations'
+/* eslint-disable */
+import Vue from "vue";
+import Vuex from "vuex";
 
-export default createStore({
-  state,
-  mutations,
-  actions,
-  modules: {}
-})
+Vue.use(Vuex);
+const files = require.context("./modules", false, /\.js$/);
+const modules = {};
+
+files.keys().forEach((key) => {
+    modules[key.replace(/(\.\/|\.js)/g, "")] = files(key).default;
+});
+Object.keys(modules).forEach((key) => {
+    modules[key]["namespaced"] = true;
+});
+const store = new Vuex.Store({
+    modules,
+});
+export default store;

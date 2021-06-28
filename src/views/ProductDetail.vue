@@ -1,124 +1,101 @@
-<!--
- * 严肃声明：
- * 开源版本请务必保留此注释头信息，若删除我方将保留所有法律责任追究！
- * 本系统已申请软件著作权，受国家版权局知识产权以及国家计算机软件著作权保护！
- * 可正常分享和学习源码，不得用于违法犯罪活动，违者必究！
- * Copyright (c) 2020 陈尼克 all rights reserved.
- * 版权所有，侵权必究！
- *
--->
-
 <template>
   <div class="product-detail">
     <s-header :name="'商品详情'"></s-header>
     <div class="detail-content">
       <div class="detail-swipe-wrap">
-        <van-swipe class="my-swipe" indicator-color="#1baeae">
-          <van-swipe-item v-for="(item, index) in detail.goodsCarouselList" :key="index">
-            <img :src="item" alt="">
+        <van-swipe class="my-swipe" indicator-color="rgb(23, 157, 254)">
+          <van-swipe-item v-for="(item, index) in detail.picture" :key="index">
+            <img :src="prefix(item.url)" alt="">
           </van-swipe-item>
         </van-swipe>
       </div>
       <div class="product-info">
         <div class="product-title">
-          {{ detail.goodsName || '' }}
+          {{ detail.name }}
         </div>
         <div class="product-desc">免邮费 顺丰快递</div>
         <div class="product-price">
-          <span>¥{{ detail.sellingPrice || '' }}</span>
-          <!-- <span>库存203</span> -->
+          <span style="color: #F63515;font-size: 22px;">¥{{ detail.outPrice }}</span>
+          <span>
+            <van-count-down :time="detail.time"  style="">
+              <template #default="timeData">
+                <span class="block">{{ timeData.hours }}</span>
+                <span class="colon">:</span>
+                <span class="block">{{ timeData.minutes }}</span>
+                <span class="colon">:</span>
+                <span class="block">{{ timeData.seconds }}</span>
+              </template>
+            </van-count-down> 
+          </span>
         </div>
       </div>
       <div class="product-intro">
         <ul>
-          <li>概述</li>
-          <li>参数</li>
+          <li>简介</li>
+          <!-- <li>参数</li>
           <li>安装服务</li>
-          <li>常见问题</li>
+          <li>常见问题</li> -->
         </ul>
-        <div class="product-content" v-html="detail.goodsDetailContent || ''"></div>
+        <div class="product-content" v-html="detail.description"></div>
       </div>
     </div>
-    <van-action-bar>
-      <van-action-bar-icon icon="chat-o" text="客服" />
-      <van-action-bar-icon icon="cart-o" :badge="!count ? '' : count" @click="goTo()" text="购物车" />
-      <van-action-bar-button type="warning" @click="handleAddCart" text="加入购物车" />
-      <van-action-bar-button type="danger" @click="goToCart" text="立即购买" />
-    </van-action-bar>
+    <van-goods-action>
+      <!-- <van-goods-action-icon icon="chat-o" text="客服" />
+      <van-goods-action-icon icon="cart-o" :info="!count ? '' : count" @click="goTo()" text="购物车"/> -->
+      <!-- <van-goods-action-button type="warning" @click="addCart" text="奖品区购买" /> -->
+      <van-goods-action-button type="info" @click="goToCart" text="立即购买" />
+    </van-goods-action>
   </div>
 </template>
 
 <script>
-import { reactive, onMounted, computed, toRefs, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useStore } from 'vuex'
-import { getDetail } from '@/service/good'
-import { addCart } from '@/service/cart'
+import { getDetail } from '../service/product'
+import { addCart } from '../service/cart'
 import sHeader from '@/components/SimpleHeader'
+import {okCode, errorCode,} from "../config/settings";
 import { Toast } from 'vant'
-import { prefix } from '@/common/js/utils'
 export default {
-  setup() {
-    const route = useRoute()
-    const router = useRouter()
-    const store = useStore()
-
-    const state = reactive({
-      detail: {
-        goodsCarouselList: []
-      }
-    })
-
-    onMounted(async () => {
-      const { id } = route.params
-      const { data } = await getDetail(id)
-      data.goodsCarouselList = data.goodsCarouselList.map(i => prefix(i))
-      state.detail = data
-      store.dispatch('updateCart')
-    })
-
-    nextTick(() => {
-      // 一些和DOM有关的东西
-      const content = document.querySelector('.detail-content')
-      content.scrollTop = 0
-    })
-
-    const goBack = () => {
-      router.go(-1)
-    }
-
-    const goTo = () => {
-      router.push({ path: '/cart' })
-    }
-
-    const handleAddCart = async () => {
-      const { resultCode } = await addCart({ goodsCount: 1, goodsId: state.detail.goodsId })
-      if (resultCode == 200 ) Toast.success('添加成功')
-      store.dispatch('updateCart')
-    }
-
-    const goToCart = async () => {
-      await addCart({ goodsCount: 1, goodsId: state.detail.goodsId })
-      store.dispatch('updateCart')
-      router.push({ path: '/cart' })
-    }
-
-    const count = computed(() => {
-      console.log(111, store.state.cartCount)
-      return store.state.cartCount
-    })
-
+  data() {
     return {
-      ...toRefs(state),
-      goBack,
-      goTo,
-      handleAddCart,
-      goToCart,
-      count
+      detail: {
+      }
     }
   },
   components: {
     sHeader
+  },
+  async mounted() {
+    const { no } = this.$route.params
+    const { code, data } = await getDetail({ no: no})
+    if (code === okCode) {
+      this.detail = data[0]
+    } else {
+      Toast.fail('该商品不存在！')
+      this.detail = []
+    }
+  },
+  methods: {
+    goBack() {
+      this.$router.go(-1)
+    },
+    goToCart() {
+      this.$router.push({ path: '/cart' })
+    },
+    // async addCart() {
+    //   const { data, resultCode } = await addCart({ goodsCount: 1, goodsId: this.detail.goodsId })
+    //   if (resultCode == 200 ) Toast.success('添加成功')
+    //   this.$store.dispatch('updateCart')
+    // },
+    // async goToCart() {
+    //   const { data, resultCode } = await addCart({ goodsCount: 1, goodsId: this.detail.goodsId })
+    //   this.$store.dispatch('updateCart')
+    //   this.$router.push({ path: '/cart' })
+    // }
+  },
+  computed: {
+    count () {
+      return this.$store.state.user.count
+    }
   }
 }
 </script>
@@ -144,9 +121,7 @@ export default {
       }
     }
     .detail-content {
-      height: calc(100vh - 50px);
-      overflow: hidden;
-      overflow-y: auto;
+      margin-top: 44px;
       .detail-swipe-wrap {
         .my-swipe .van-swipe-item {
           img {
@@ -170,19 +145,18 @@ export default {
         }
         .product-price {
           .fj();
-          span:nth-child(1) {
-            color: #F63515;
-            font-size: 22px;
-          }
-          span:nth-child(2) {
-            color: #999;
-            font-size: 16px;
-          }
+          // span:nth-child(1) {
+          //   color: #F63515;
+          //   font-size: 22px;
+          // }
+          // span:nth-child(2) {
+          //   color: #999;
+          //   font-size: 16px;
+          // }
         }
       }
       .product-intro {
         width: 100%;
-        padding-bottom: 50px;
         ul {
           .fj();
           width: 100%;
@@ -207,10 +181,10 @@ export default {
         }
       }
     }
-    .van-action-bar-button--warning {
+    .van-goods-action-button--warning {
       background: linear-gradient(to right,#6bd8d8, @primary)
     }
-    .van-action-bar-button--danger {
+    .van-goods-action-button--danger {
       background: linear-gradient(to right, #0dc3c3, #098888)
     }
   }

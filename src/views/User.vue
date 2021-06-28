@@ -1,43 +1,89 @@
-<!--
- * 严肃声明：
- * 开源版本请务必保留此注释头信息，若删除我方将保留所有法律责任追究！
- * 本系统已申请软件著作权，受国家版权局知识产权以及国家计算机软件著作权保护！
- * 可正常分享和学习源码，不得用于违法犯罪活动，违者必究！
- * Copyright (c) 2020 陈尼克 all rights reserved.
- * 版权所有，侵权必究！
- *
--->
-
 <template>
   <div class="user-box">
-    <s-header :name="'我的'"></s-header>
-    <van-skeleton title :avatar="true" :row="3" :loading="loading">
-      <div class="user-info">
-        <div class="info">
-          <img src="https://s.yezgea02.com/1604040746310/aaaddd.png"/>
-          <div class="user-desc">
-            <span>昵称：{{ user.nickName }}</span>
-            <span>登录名：{{ user.loginName }}</span>
-            <span class="name">个性签名：{{ user.introduceSign }}</span>
-          </div>
+    <s-header :name="'Me'"></s-header>
+    <div class="user-info">
+      <div class="info">
+        <img :src="user.avatar"/>
+        <div class="user-desc">
+          <span>userName：{{ user.username }}</span>
+          <span>email：{{ user.email }}</span>
+          <span class="name">introduceSign：{{ user.description ? user.description: '这个人太懒什么都没留下！' }}</span>
         </div>
       </div>
-    </van-skeleton>
+    </div>
+
+    <van-row style="background:#fff;">
+      <van-col span="8" class="money" @click="goTo('balance')">
+        <div class="count"> {{ user.balance }} </div>
+        <div class="text"> Balance </div>
+      </van-col>
+      <van-col span="8" class="money" @click="goTo('coupon')">
+        <div style="border-left: solid 1px rgb(178 189 199);border-right: solid 1px rgb(178 189 199);">
+        <div class="count"> {{ user.coupon }} </div>
+        <div class="text"> Coupon </div>
+        </div>
+      </van-col>
+      <van-col span="8" class="money" @click="goTo('point')">
+        <div class="count"> {{ user.point }} </div>
+        <div class="text"> Point </div>
+      </van-col>
+      <van-col span="24" style="height: 10px; background:#f9f9f9;"></van-col>
+    </van-row>
+
     <ul class="user-list">
-      <li class="van-hairline--bottom" @click="goTo('/order')">
-        <span>我的订单</span>
+      <li @click="goTo('order')">
+        <van-icon name="cart-o" size="25" style="margin: auto 5px;"/>
+        <span style="width:100%;">
+        我的订单
+        </span>
         <van-icon name="arrow" />
       </li>
-      <li class="van-hairline--bottom" @click="goTo('/setting')">
-        <span>账号管理</span>
+      <li @click="goTo('balance')">
+        <van-icon name="cashier-o" size="25" style="margin: auto 5px;"/>
+        <span style="width:100%;">
+          充值管理</span>
         <van-icon name="arrow" />
       </li>
-      <li class="van-hairline--bottom" @click="goTo('/address', { from: 'mine' })">
-        <span>地址管理</span>
+       <li @click="goTo('coupon')">
+        <van-icon name="gold-coin-o" size="25" style="margin: auto 5px;"/>
+        <span style="width:100%;">
+          优惠券兑换</span>
         <van-icon name="arrow" />
       </li>
-      <li @click="goTo('/about')">
-        <span>关于我们</span>
+      <li @click="goTo('point')">
+        <van-icon name="gold-coin-o" size="25" style="margin: auto 5px;"/>
+        <span style="width:100%;">
+          积分兑换</span>
+        <van-icon name="arrow" />
+      </li>
+      <li @click="goTo('setting')">
+        <van-icon name="friends-o" size="25" style="margin: auto 5px;"/>
+        <span style="width:100%;">
+          账号管理</span>
+        <van-icon name="arrow" />
+      </li>
+      <li @click="goTo('address?from=mine')">
+         <van-icon name="location-o" size="25" style="margin: auto 5px;"/>
+        <span style="width:100%;">
+          地址管理</span>
+        <van-icon name="arrow" />
+      </li>
+      <li @click="goTo('share')">
+         <van-icon name="share-o" size="25" style="margin: auto 5px;"/>
+        <span style="width:100%;">
+          扫码分享</span>
+        <van-icon name="arrow" />
+      </li>
+      <li @click="goTo('contact')">
+         <van-icon name="chat-o" size="25" style="margin: auto 5px;"/>
+        <span style="width:100%;">
+          意见反馈</span>
+        <van-icon name="arrow" />
+      </li>
+      <li @click="goTo('about')">
+        <van-icon name="star-o" size="25" style="margin: auto 5px;"/>
+        <span style="width:100%;">
+          关于我们</span>
         <van-icon name="arrow" />
       </li>
     </ul>
@@ -46,49 +92,75 @@
 </template>
 
 <script>
-import { reactive, onMounted, toRefs } from 'vue'
 import navBar from '@/components/NavBar'
 import sHeader from '@/components/SimpleHeader'
-import { getUserInfo } from '@/service/user'
-import { useRouter } from 'vue-router'
+import {okCode, errorCode,} from "../config/settings";
+import { Toast } from 'vant'
+
+
+const coupon = {
+  available: 1,
+  condition: '无使用门槛\n最多优惠12元',
+  reason: '',
+  value: 150,
+  name: '优惠券名称',
+  startAt: 1489104000,
+  endAt: 1514592000,
+  valueDesc: '1.5',
+  unitDesc: '元',
+};
 export default {
   components: {
     navBar,
     sHeader
   },
-  setup() {
-    const router = useRouter()
-    const state = reactive({
-      user: {},
-      loading: true
-    })
-
-    onMounted(async () => {
-      const { data } = await getUserInfo()
-      state.user = data
-      state.loading = false
-    })
-
-    const goBack = () => {
-      router.go(-1)
-    }
-
-    const goTo = (r, query) => {
-      router.push({ path: r, query: query || {} })
-    }
-
+  data() {
     return {
-      ...toRefs(state),
-      goBack,
-      goTo
+      user: {},
+      chosenCoupon: -1,
+      coupons: [coupon],
+      disabledCoupons: [coupon],
+      showList: false,
+      value: '',
     }
+  },
+  async mounted() {
+    this.user = await this.$store.dispatch("user/getInfo");
+  },
+  methods: {
+    goBack() {
+      this.$router.go(-1)
+    },
+    goTo(r) {
+      this.$router.push({ path: r })
+    },
+    onSearch(val) {
+      Toast(val);
+    },
+    onChange(index) {
+      this.showList = false;
+      this.chosenCoupon = index;
+    },
+    onExchange(code) {
+      this.coupons.push(coupon);
+    },
   }
 }
 </script>
 
 <style lang="less" scoped>
   @import '../common/style/mixin';
+  .money {
+    padding: 20px 0px 15px 0px;
+    .count {
+      width:100%; text-align: center; font-size: 14px;
+    }
+    .text {
+      width:100%; text-align: center; font-size: 14px; font-weight: bold;
+    }
+  }
   .user-box {
+    background:#f9f9f9;
     .user-header {
       position: fixed;
       top: 0;
@@ -107,12 +179,11 @@ export default {
       }
     }
     .user-info {
-      width: 94%;
-      margin: 10px;
+      width: 100%;
       height: 115px;
-      background: linear-gradient(90deg, @primary, #51c7c7);
-      box-shadow: 0 2px 5px #269090;
-      border-radius: 6px;
+      background: url(~@/assets/bj.png) no-repeat;
+      background-size: 100% 100%;
+      margin-top: 44px;
       .info {
         position: relative;
         display: flex;
@@ -153,8 +224,8 @@ export default {
       }
     }
     .user-list {
+      background:#fff;
       padding: 0 20px;
-      margin-top: 20px;
       li {
         height: 40px;
         line-height: 40px;
